@@ -1,16 +1,15 @@
-"""第1回: 素のLLMに1回だけ質問するスクリプト。
+"""会話履歴を保持してLLMに質問するスクリプト。
 
 使い方:
-    uv run python -m app.ask "LoRAとは何ですか？"
-    uv run python -m app.ask            # 質問を省略すると、講座に固有の質問をする
+uv run python -m app.ask "LoRAとは何ですか？"
+uv run python -m app.ask            # 初回質問を省略すると、既定の質問をする
+    # 回答後に続けて質問を入力できます。Ctrl-Dで終了します。
 
-ツールも会話履歴も持たない「素の」呼び出し。
-講座に固有のことを聞くと、「分からない」と答えるか、一般論でもっともらしく答える
-（講座の実際とは違う）ことを確かめよう。
-（第3回で、用語集を検索できるエージェントにして改善する）
+同じChatオブジェクトに質問を送ることで、会話履歴を保持します。
 """
 
 import argparse
+import time
 
 from google import genai
 from google.genai import errors
@@ -22,17 +21,27 @@ from google.genai import types
 DEFAULT_QUESTION = "AIE2026の講座の宿題にある「3レベル」とは何ですか？"
 
 
-def ask(question: str) -> str:
-    client = genai.Client(api_key=get_api_key())
-    # response = client.models.generate_content(model=MODEL, contents=question)
-    response = client.models.generate_content(model=MODEL, contents=question, config=types.GenerateContentConfig(temperature=1.0))
+def ask(question: str, chat=None) -> str:
+    """質問を送り、回答を返す。chatを再利用すると会話履歴を保持する。"""
+    started_at = time.perf_counter()
+    if chat is None:
+        client = genai.Client(api_key=get_api_key())
+        response = client.models.generate_content(
+            model=MODEL,
+            contents=question,
+            config=types.GenerateContentConfig(temperature=1.0),
+        )
+    else:
+        response = chat.send_message(question)
+    elapsed_seconds = time.perf_counter() - started_at
 
     usage = response.usage_metadata
     if usage is None:
-        print("[usage] unavailable")
+        print(f"[usage] elapsed_seconds={elapsed_seconds:.3f} unavailable")
     else:
         print(
-            f"[usage] input_tokens={usage.prompt_token_count} "
+            f"[usage] elapsed_seconds={elapsed_seconds:.3f} "
+            f"input_tokens={usage.prompt_token_count} "
             f"output_tokens={usage.candidates_token_count}"
         )
 
@@ -40,14 +49,30 @@ def ask(question: str) -> str:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="素のLLMに質問する")
+    parser = argparse.ArgumentParser(description="会話履歴を保持してLLMに質問する")
     parser.add_argument("question", nargs="?", default=DEFAULT_QUESTION)
     args = parser.parse_args()
 
+    client = genai.Client(api_key=get_api_key())
+    chat = client.chats.create(
+        model=MODEL,
+        config=types.GenerateContentConfig(temperature=1.0),
+    )
+
     print(f"[model] {MODEL}")
-    print(f"[質問] {args.question}\n")
     try:
-        print(ask(args.question))
+        question = args.question
+        while True:
+            print(f"[質問] {question}\n")
+            print(ask(question, chat))
+            try:
+                question = input("\n続けて質問してください（Ctrl-Dで終了）: ").strip()
+            except EOFError:
+                print()
+                break
+            if not question:
+                continue
+            print()
     except errors.APIError as e:
         print(api_error_message(e.code, e.message))
         raise SystemExit(1)
