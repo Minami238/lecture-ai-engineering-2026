@@ -1,3 +1,4 @@
+import re
 from types import SimpleNamespace
 
 from app import ask as ask_module
@@ -17,4 +18,8 @@ def test_ask_prints_input_and_output_token_counts(monkeypatch, capsys):
     monkeypatch.setattr(ask_module.genai, "Client", lambda **kwargs: client)
 
     assert ask_module.ask("question") == "answer"
-    assert capsys.readouterr().out == "[usage] input_tokens=12 output_tokens=7\n"
+    assert re.fullmatch(
+        r"\[usage\] elapsed_seconds=\d+\.\d{3} "
+        r"input_tokens=12 output_tokens=7\n",
+        capsys.readouterr().out,
+    )
