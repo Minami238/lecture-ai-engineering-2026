@@ -10,6 +10,8 @@ from functools import cache
 from pathlib import Path
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+LOG_DIR = Path(__file__).resolve().parent.parent / "learning_log"
+LOG_PATH = LOG_DIR / "learning_log.json"
 MAX_RESULTS = 3
 
 
@@ -81,8 +83,9 @@ def get_lecture_summary(lecture: int) -> str:
 
 
 def make_quiz(lecture: int) -> str:
-    """指定した回の用語から1つ選んで、確認問題と答えを返す。
-    「第〇回の確認問題を出して」のように、復習問題の依頼を受けた際に使う。
+    """指定した回（1始まりの整数）の用語から1つを選び、確認問題と答えを返す。
+
+    「第〇回の確認問題を出して」のように、復習用の問題を求められたときに使う。
     """
     terms = [term for term in load_glossary() if term["lecture"] == lecture]
     if not terms:
@@ -96,3 +99,14 @@ def make_quiz(lecture: int) -> str:
         },
         ensure_ascii=False,
     )
+
+
+def save_learning_log(topic: str, note: str) -> str:
+    """学習の記録を learning_log/ に保存する。
+    """
+    # 当メソッドで保存確認は実装せず、呼び出し元で利用者の確認を得る。
+    LOG_DIR.mkdir(exist_ok=True)
+    logs = json.loads(LOG_PATH.read_text(encoding="utf-8")) if LOG_PATH.exists() else []
+    logs.append({"topic": topic, "note": note})
+    LOG_PATH.write_text(json.dumps(logs, ensure_ascii=False, indent=2), encoding="utf-8")
+    return f"保存しました: {LOG_PATH.name}"
