@@ -5,7 +5,7 @@
 
 `uv run --with` で講座の環境に Streamlit を一時的に足して動かす（pyproject.toml は変えない）。
 
-- ラベル付け：評価セット（data/eval/lec04.jsonl）を 1 件ずつ表示し、5 つの基準の合格／不合格と
+- ラベル付け：評価セット（data/eval/lec04_cases.jsonl）を 1 件ずつ表示し、5 つの基準の合格／不合格と
   「迷った」を lectures/04/labels.jsonl に保存する
 - 比べる：自分のラベルと講師のラベル（lectures/04/reference/labels_instructor.jsonl）の一致を見る
 - 作問（宿題・実装）：質問と期待するふるまいを書いて、自分の評価セット（data/eval/my_cases.jsonl）を作る。
