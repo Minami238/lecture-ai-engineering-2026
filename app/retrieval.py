@@ -135,7 +135,36 @@ def search(query: str) -> list[dict]:
                    vec_distance_cosine(embedding, ?) AS distance
             FROM chunks ORDER BY distance, page_id LIMIT ?
         """, (sqlite_vec.serialize_float32(vector), RAG_TOP_K))
-        return [dict(row) for row in rows]
+        results = [dict(row) for row in rows]
+    pages = {page["page_id"]: page for page in load_pages(RAG_SOURCE)}
+    _attach_neighbor_pages(results, pages)
+    return results
+
+
+def _attach_neighbor_pages(results: list[dict], pages: dict[str, dict]) -> None:
+    """結果に同じ資料内の前後ページを、重複しないように追加する。"""
+    pages_by_document = defaultdict(list)
+    for page in pages.values():
+        pages_by_document[page["document_id"]].append(page)
+    for document_pages in pages_by_document.values():
+        document_pages.sort(key=lambda page: page["page"])
+
+    positions = {}
+    for document_pages in pages_by_document.values():
+        for index, page in enumerate(document_pages):
+            positions[page["page_id"]] = (document_pages, index)
+
+    included = {result["page_id"] for result in results}
+    for result in results:
+        document_pages, index = positions[result["page_id"]]
+        neighbors = []
+        for neighbor_index in (index - 1, index + 1):
+            if 0 <= neighbor_index < len(document_pages):
+                neighbor = document_pages[neighbor_index]
+                if neighbor["page_id"] not in included:
+                    included.add(neighbor["page_id"])
+                    neighbors.append(neighbor)
+        result["context_pages"] = neighbors
 
 
 def search_graph(query: str) -> dict:
@@ -181,7 +210,9 @@ def search_graph(query: str) -> dict:
                 if neighbor not in candidates or priority < candidates[neighbor][0]:
                     candidates[neighbor] = (priority, candidate)
     expanded = [candidate for _, candidate in sorted(candidates.values())]
-    return {"seeds": results, "expanded": expanded[:max(0, GRAPH_MAX_RESULTS - len(results))],
+    expanded = expanded[:max(0, GRAPH_MAX_RESULTS - len(results))]
+    _attach_neighbor_pages(results + expanded, pages)
+    return {"seeds": results, "expanded": expanded,
             "max_hops": GRAPH_HOPS}
 
 
@@ -209,3 +240,7 @@ if __name__ == "__main__":
         print(f"タイトル: {result['title']}")
         print(f"ページ: {result['page']}")
         print(f"\n{result['content']}")
+        for page in result["context_pages"]:
+            print(f"\n--- 前後ページ: {page['document_title']} / {page['title']} "
+                  f"(PDF p.{page['page']}) ---")
+            print(page["content"])
