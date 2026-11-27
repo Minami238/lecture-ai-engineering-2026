@@ -4,11 +4,15 @@
 
 <!-- [tool call] の行は、表示された行をそのまま貼り付けてください。終わらなかった STEP は、空欄のままでかまいません。 -->
 
-- STEP 1 のツールの名前：
-- STEP 2 の [tool call]：
-- STEP 3 の [tool call]：
-- STEP 4 の [tool call]：
-- 気づき・疑問：
+- STEP 1 のツールの名前：search_glossary
+- STEP 2 の [tool call]：glossary_search_glossary({'query': '3レベル'})
+- STEP 3 の [tool call]：fetch_fetch({'url': 'https://modelcontextprotocol.io/'})
+- STEP 4 の [tool call]：aws_aws___search_documentation({'search_phrase': 'Amazon S3 versioning overview'})
+- 気づき・疑問：  
+講義の説明を受け、外部のMCPサーバーを使用する場合は安全性を確かめてから使用する必要があることを理解した。  
+URLや提供元のリスクに関する注意書きを確認するなどの方法が紹介されていたが、他のユーザーが使用する際にサーバーに対して想定外の操作を実行してしまうことはあるのか疑問に思った。  
+意図せずツールの処理内容を変更してしまったり想定外の機能を追加してしまう可能性がある場合、URLやリスクに関する注意書きを確認しても安全性を十分に確認することはできないのではないかと思った。  
+権限による制御などの対策は取られていると思うが、利用する際は十分に気を付ける必要があると思った。
 
 ## 宿題
 
